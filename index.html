@@ -5,21 +5,80 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Mini App</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <style>
+    body {
+      background-color: var(--tg-theme-bg-color);
+      color: var(--tg-theme-text-color);
+      font-family: sans-serif;
+      padding: 20px;
+    }
+
+    button {
+      background-color: var(--tg-theme-button-color);
+      color: var(--tg-theme-button-text-color);
+      border: none;
+      padding: 10px 20px;
+      border-radius: 8px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+  </style>
 </head>
 <body>
-  <h1>Привет!</h1>
-  <p id="username">Загрузка...</p>
+
+  <h1 id="greeting">Загрузка...</h1>
+  <p id="stored">Сохранённое значение: —</p>
+  <button onclick="saveData()">Сохранить счёт</button>
 
   <script>
     const tg = window.Telegram.WebApp;
     tg.ready();
+    tg.expand(); // развернуть на весь экран
 
+    // --- Тема подхватывается автоматически через CSS переменные ---
+
+    // --- Приветствие ---
     const user = tg.initDataUnsafe?.user;
-    if (user) {
-      document.getElementById("username").textContent = "Привет, " + user.first_name;
-    } else {
-      document.getElementById("username").textContent = "Открой через Telegram";
+    document.getElementById("greeting").textContent =
+      user ? "Привет, " + user.first_name : "Открой через Telegram";
+
+    // --- CloudStorage helpers ---
+    const storage = tg.CloudStorage;
+
+    function storageSet(key, value) {
+      return new Promise((res, rej) =>
+        storage.setItem(key, value, (err) => err ? rej(err) : res())
+      );
     }
+
+    function storageGet(key) {
+      return new Promise((res, rej) =>
+        storage.getItem(key, (err, val) => err ? rej(err) : res(val))
+      );
+    }
+
+    // --- Читаем сохранённое при загрузке ---
+    storageGet("score")
+      .then(val => {
+        if (val) document.getElementById("stored").textContent =
+          "Сохранённое значение: " + val;
+      })
+      .catch(() => {});
+
+    // --- Сохраняем по кнопке ---
+    let score = 0;
+    async function saveData() {
+      score++;
+      await storageSet("score", String(score));
+      document.getElementById("stored").textContent =
+        "Сохранённое значение: " + score;
+    }
+
+    // --- MainButton ---
+    tg.MainButton.setText("Закрыть приложение");
+    tg.MainButton.show();
+    tg.MainButton.onClick(() => tg.close());
   </script>
+
 </body>
 </html>
